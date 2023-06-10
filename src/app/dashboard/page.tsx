@@ -3,7 +3,7 @@ import React, {useState} from 'react';
 import '@/app/globals.css';
 import {useAuth } from "@/Components/providers/supabase-auth-provider";
 import { useRouter } from "next/navigation";
-import {LifeBuoy, Link, Lock, LogOut, Mail, User, Send} from "lucide-react";
+import {LifeBuoy, Link, Lock, LogOut, User, Send} from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,9 +28,10 @@ const DashboardPage = () => {
         e.preventDefault ();
         setError (null);
         try {
-            const error = await addLink(link);
-            if (error) {
-                setError (error);
+            const date = new Date();
+            const result = await addLink(link, date);
+            if (result?.error) {
+                setError (result?.error.toString);
             }
         } catch (error) {
             console.log ("Something went wrong!");

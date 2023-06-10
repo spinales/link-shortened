@@ -23,12 +23,13 @@ const LoginForm = () => {
             if (error) {
                 setError (error);
             }
+
         } catch (error) {
             console.log ("Something went wrong!");
         }
     };
 
-    // Check if there is a user
+    // Check if there is a user / logged
     useEffect (() => {
         if (user) {
             router.push ("/dashboard");

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect } from "react";
 import useSWR from "swr";
 import { useSupabase } from "./supabase-provider";
+import { addDays } from "date-fns";
 
 interface ContextI {
     user: Profile | null | undefined;
@@ -15,10 +16,12 @@ interface ContextI {
     signOut: () => Promise<void>;
     // signInWithGithub: () => Promise<void>;
     recoverPassword: (email: string) => Promise<string | null>;
-    addLink: (email: string) => Promise<string | null>;
+    addLink: (link: string, expired: Date) => Promise< { Link: Link, error: null } | { Link: null, error: String } | null>;
+    addLinkAnonymous: (link: string) => Promise< { Link: Link, error: null } | { Link: null, error: String } | null>
     retrieveLinks: () => Promise< Link[] | string | null>;
     changePassword: (newPassword: string) => Promise<string | null>;
     signInWithEmail: (email: string, password: string) => Promise<string | null>;
+    register: (email: string, password: string, username: string, fullname: string) => Promise<string | null>;
 }
 const Context = createContext<ContextI>({
     user: null,
@@ -28,10 +31,12 @@ const Context = createContext<ContextI>({
     signOut: async () => {},
     // signInWithGithub: async () => {},
     recoverPassword: async (email: string) => null,
-    addLink: async (link: string) => null,
+    addLink: async (link: string, expired: Date) => null,
+    addLinkAnonymous: async (link: string) => null,
     retrieveLinks: async () => null,
     changePassword: async (newPassword: string) => null,
     signInWithEmail: async (email: string, password: string) => null,
+    register: async (email: string, password: string, username: string, fullname: string) => null,
 });
 
 export default function SupabaseAuthProvider({
@@ -59,19 +64,6 @@ export default function SupabaseAuthProvider({
         }
     };
 
-    const retrieveLinks = async () => {
-        const { data: links, error } = await supabase
-            .from("links")
-            .select("*")
-            .eq("user", serverSession?.user?.id);
-        if (error) {
-            console.log(error);
-            return error.message;
-        } else {
-            return links;
-        }
-    };
-
     const {
         data: user,
         error,
@@ -84,10 +76,6 @@ export default function SupabaseAuthProvider({
         await supabase.auth.signOut();
         router.push("/login");
     };
-
-    // const signInWithGithub = async () => {
-    //     await supabase.auth.signInWithOAuth({ provider: "github" });
-    // };
 
     // Sign-In with Email
     const signInWithEmail = async (email: string, password: string) => {
@@ -104,8 +92,6 @@ export default function SupabaseAuthProvider({
 
         return null;
     };
-
-
 
     // recover password
     const recoverPassword = async (email: string) => {
@@ -126,14 +112,57 @@ export default function SupabaseAuthProvider({
         return null;
     };
 
-    const addLink = async (link: string) => {
-        const { error } = await supabase
-            .from("links")
-            .insert({user: user?.id, link_page:link });
+    const register = async (email: string, password: string, fullname: string, username: string) => {
+        const { data, error } = await supabase.auth.signUp({email: email, password: password});
         if (error) {
             return error.message;
         }
+
+        const errorInsertResult = await supabase
+            .from("profiles")
+            .insert({ id: data.user ? data.user.id : "", avatar_url: "", full_name: fullname, username: username, role: 2});
+        if (error) {
+            return errorInsertResult.error ? errorInsertResult.error.message: "Error insertando data";
+        }
+
         return null;
+    };
+
+    // remove from auth provider
+    const addLink = async (link: string, expired: Date) => {
+        const { data, error } = await supabase
+            .from("links")
+            .insert({user: user?.id, link_page:link, expired_date: expired.toDateString() })
+            .select().single();
+        if (error) {
+            return { Link: null, error: error.message };
+        }
+        return { Link:data, error: null };
+    };
+
+    const addLinkAnonymous = async (link: string) => {
+        const tomorrow = addDays(new Date(), 1);
+        const { data, error } = await supabase
+            .from("links")
+            .insert({user: user?.id, link_page:link, expired_date: tomorrow.toDateString() })
+            .select().single();
+        if (error) {
+            return { Link: null, error: error.message };
+        }
+        return { Link:data, error: null };
+    };
+
+    const retrieveLinks = async () => {
+        const { data: links, error } = await supabase
+            .from("links")
+            .select("*")
+            .eq("user", serverSession?.user?.id);
+        if (error) {
+            console.log(error);
+            return error.message;
+        } else {
+            return links;
+        }
     };
 
     // Refresh the Page to Sync Server and Client
@@ -159,10 +188,12 @@ export default function SupabaseAuthProvider({
         signOut,
         // signInWithGithub,
         addLink,
+        addLinkAnonymous,
         recoverPassword,
         retrieveLinks,
         changePassword,
         signInWithEmail,
+        register,
     };
 
     return <Context.Provider value={exposed}>{children}</Context.Provider>;
