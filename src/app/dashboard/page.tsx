@@ -17,8 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar";
 import {Label} from "@/Components/ui/label";
 import {Input} from "@/Components/ui/input";
 import {Button} from "@/Components/ui/button";
+import ListLinks from "@/Components/ListLinks";
 
-const DashboardPage = () => {
+export default function DashboardPage() {
     const { user, signOut, addLink, retrieveLinks } = useAuth();
     const router = useRouter();
     const [link, setLink] = useState<string> ("");
@@ -33,6 +34,7 @@ const DashboardPage = () => {
             if (result?.error) {
                 setError (result?.error.toString);
             }
+            await navigator.clipboard.writeText("http://localhost:3000/" + result?.Link?.uuid);
         } catch (error) {
             console.log ("Something went wrong!");
         }
@@ -57,6 +59,10 @@ const DashboardPage = () => {
                 <a href="/" className="pl-2 flex items-center justify-items-center text-2xl font-semibold text-gray-900 dark:text-white">
                     <Link className="w-12 h-8 pr-2 text-palette-primary" />
                     BitCutter
+                </a>
+
+                <a href={"/dashboard/" + user?.id} className="pl-2 flex items-center justify-items-center text-2xl font-semibold text-gray-500">
+                    Links
                 </a>
                 {/* Avatar */}
                 <div className="flex items-center justify-center">
@@ -120,6 +126,8 @@ const DashboardPage = () => {
                     </Button>
                 </form>
             </div>
+
+            {/*<ListLinks user={user?.id || ''} />*/}
         </div>
         // <div className="antialiased bg-gray-50 dark:bg-gray-900">
         //     <nav
@@ -1433,5 +1441,3 @@ const DashboardPage = () => {
         // </div>
     );
 };
-
-export default DashboardPage;
